@@ -1,0 +1,48 @@
+### Maven ###
+target/
+!**/src/main/**/target/
+!**/src/test/**/target/
+.mvn/wrapper/maven-wrapper.jar
+!.mvn/wrapper/maven-wrapper.properties
+pom.xml.tag
+pom.xml.releaseBackup
+pom.xml.versionsBackup
+release.properties
+dependency-reduced-pom.xml
+
+### IDE build output ###
+out/
+bin/
+
+### IntelliJ IDEA ###
+.idea/
+*.iml
+*.ipr
+*.iws
+
+### Eclipse / STS ###
+.apt_generated
+.classpath
+.factorypath
+.project
+.settings/
+.springBeans
+.sts4-cache
+
+### macOS ###
+.DS_Store
+._*
+
+### Logs ###
+*.log
+logs/
+
+### Local config and secrets ###
+.env
+.env.*
+!.env.example
+application-local.properties
+application-local.yml
+
+### HTTP client private env (IntelliJ) ###
+http-client.private.env.json
