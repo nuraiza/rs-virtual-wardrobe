@@ -6,6 +6,10 @@ import io.github.nuraiza.backend.web.dto.ClothingItemDtos;
 import io.github.nuraiza.backend.web.mapper.ClothingItemMapper;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
@@ -24,7 +28,7 @@ public class ClothingItemController {
 
     @PostMapping
     public ResponseEntity<ClothingItemDtos.Response> createClothingItem(@PathVariable Long userId, @Valid @RequestBody ClothingItemDtos.CreateRequest body) {
-        ClothingItemEntity clothingItemEntity = clothingItemService.createClothingItem(userId, body.name(), body.description());
+        ClothingItemEntity clothingItemEntity = clothingItemService.createClothingItem(userId, body.name(), body.description(), body.categoryIds());
         ClothingItemDtos.Response response = clothingItemMapper.toResponse(clothingItemEntity);
         URI location = ServletUriComponentsBuilder.fromCurrentRequest()
                 .path("/{clothingItemId}")
@@ -42,15 +46,16 @@ public class ClothingItemController {
     }
 
     @GetMapping
-    public ResponseEntity<List<ClothingItemDtos.Response>> getAllClothingItems(@PathVariable Long userId) {
-        List<ClothingItemEntity> clothingItemEntities = clothingItemService.getAllClothingItems(userId);
-        List<ClothingItemDtos.Response> clothingItemsResponse = clothingItemMapper.toResponse(clothingItemEntities);
-        return ResponseEntity.ok(clothingItemsResponse);
+    public ResponseEntity<Page<ClothingItemDtos.Response>> getAllClothingItems(@PathVariable Long userId,
+                                                                               @RequestParam(required = false) List<String> categories,
+                                                                               @PageableDefault(sort = "id", direction = Sort.Direction.DESC) Pageable pageable) {
+        Page<ClothingItemEntity> clothingItemEntities = clothingItemService.getAllClothingItems(userId, pageable, categories);
+        return ResponseEntity.ok(clothingItemEntities.map(clothingItemMapper::toResponse));
     }
 
     @PutMapping("/{clothingItemId}")
     public ResponseEntity<ClothingItemDtos.Response> updateClothingItem(@PathVariable Long userId, @PathVariable Long clothingItemId, @Valid @RequestBody ClothingItemDtos.UpdateRequest body) {
-        ClothingItemEntity clothingItemEntity = clothingItemService.updateClothingItem(userId, clothingItemId, body.name(), body.description());
+        ClothingItemEntity clothingItemEntity = clothingItemService.updateClothingItem(userId, clothingItemId, body.name(), body.description(), body.categoryIds());
         ClothingItemDtos.Response Response = clothingItemMapper.toResponse(clothingItemEntity);
         return ResponseEntity.ok(Response);
     }

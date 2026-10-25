@@ -5,6 +5,7 @@ import io.github.nuraiza.backend.persistence.entity.CollectionEntity;
 import io.github.nuraiza.backend.persistence.entity.UserEntity;
 import io.github.nuraiza.backend.persistence.repository.ClothingItemRepository;
 import io.github.nuraiza.backend.persistence.repository.CollectionRepository;
+import io.github.nuraiza.backend.persistence.specification.ClothingItemSpecifications;
 import jakarta.persistence.EntityNotFoundException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
@@ -14,7 +15,11 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
@@ -30,6 +35,10 @@ class CollectionServiceTest {
     private static final Long USER_ID = 1L;
     private static final Long COLLECTION_ID = 10L;
     private static final Long ITEM_ID = 100L;
+    private static final Pageable PAGEABLE = Pageable.ofSize(5);
+    private static final List<String> CATEGORIES = new ArrayList<>();
+    private Page mockPage;
+    private Specification<ClothingItemEntity> spec;
 
     @Mock
     private CollectionRepository collectionRepository;
@@ -270,7 +279,7 @@ class CollectionServiceTest {
             // but still owned by the user and not deleted
             assertThat(item.getUser()).isSameAs(user);
             assertThat(user.getClothes()).contains(item);
-            verify(clothingItemRepository, never()).delete(any());
+            verify(clothingItemRepository, never()).delete((ClothingItemEntity) any());
             verify(clothingItemRepository, never()).deleteById(anyLong());
         }
 
@@ -314,10 +323,12 @@ class CollectionServiceTest {
         @Test
         void shouldReturnItemsInCollection() {
             collectionExists();
-            when(clothingItemRepository.findAllByUserIdAndCollectionsId(USER_ID, COLLECTION_ID))
-                    .thenReturn(List.of(item));
+            spec = Specification.where(ClothingItemSpecifications.belongsToUser(USER_ID))
+                    .and(ClothingItemSpecifications.hasCategories(CATEGORIES));
+            when(clothingItemRepository.findAll(spec, PAGEABLE))
+                    .thenReturn(mockPage);
 
-            List<ClothingItemEntity> result = collectionService.getAllClothingItemsInCollection(USER_ID, COLLECTION_ID);
+            Page<ClothingItemEntity> result = collectionService.getAllClothingItemsInCollection(USER_ID, COLLECTION_ID, PAGEABLE, CATEGORIES);
 
             assertThat(result).containsExactly(item);
         }
@@ -326,10 +337,10 @@ class CollectionServiceTest {
         void shouldThrowAndNotQueryItemsWhenCollectionNotFound() {
             collectionDoesNotExist();
 
-            assertThatThrownBy(() -> collectionService.getAllClothingItemsInCollection(USER_ID, COLLECTION_ID))
+            assertThatThrownBy(() -> collectionService.getAllClothingItemsInCollection(USER_ID, COLLECTION_ID, PAGEABLE, CATEGORIES))
                     .isInstanceOf(EntityNotFoundException.class);
 
-            verify(clothingItemRepository, never()).findAllByUserIdAndCollectionsId(anyLong(), anyLong());
+            verify(clothingItemRepository, never()).findAll();
         }
     }
 }

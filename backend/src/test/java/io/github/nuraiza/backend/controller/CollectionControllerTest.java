@@ -5,6 +5,7 @@ import io.github.nuraiza.backend.persistence.entity.CollectionEntity;
 import io.github.nuraiza.backend.persistence.entity.UserEntity;
 import io.github.nuraiza.backend.service.CollectionService;
 import io.github.nuraiza.backend.web.controller.CollectionController;
+import io.github.nuraiza.backend.web.mapper.CategoryMapper;
 import io.github.nuraiza.backend.web.mapper.ClothingItemMapper;
 import io.github.nuraiza.backend.web.mapper.CollectionMapper;
 import jakarta.persistence.EntityNotFoundException;
@@ -14,28 +15,36 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.context.annotation.Import;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
+import java.util.ArrayList;
 import java.util.List;
 
 import static org.hamcrest.Matchers.containsString;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 @WebMvcTest(CollectionController.class)
-@Import({CollectionMapper.class, ClothingItemMapper.class})
+@Import({CollectionMapper.class, ClothingItemMapper.class, CategoryMapper.class})
 class CollectionControllerTest {
 
     private static final Long USER_ID = 1L;
     private static final Long COLLECTION_ID = 10L;
     private static final Long ITEM_ID = 100L;
     private static final String BASE_URL = "/api/users/{userId}/collections";
+    private static final Pageable PAGEABLE = Pageable.ofSize(5);
+    private static final List<String> CATEGORIES = new ArrayList<>();
+    private Page<ClothingItemEntity> mockPage;
 
     @Autowired
     private MockMvc mockMvc;
@@ -58,6 +67,7 @@ class CollectionControllerTest {
 
         item = new ClothingItemEntity("Black jacket", "Warm winter jacket", user);
         item.setId(ITEM_ID);
+        mockPage = new PageImpl<>(List.of(item));
     }
 
     private EntityNotFoundException collectionNotFound() {
@@ -289,19 +299,32 @@ class CollectionControllerTest {
 
         @Test
         void shouldReturn200WithItems() throws Exception {
-            when(collectionService.getAllClothingItemsInCollection(USER_ID, COLLECTION_ID))
-                    .thenReturn(List.of(item));
+            when(collectionService.getAllClothingItemsInCollection(eq(USER_ID), eq(COLLECTION_ID), any(Pageable.class), eq(null)))
+                    .thenReturn(mockPage);
 
             mockMvc.perform(get(BASE_URL + "/{collectionId}/clothes", USER_ID, COLLECTION_ID))
                     .andExpect(status().isOk())
-                    .andExpect(jsonPath("$.length()").value(1))
-                    .andExpect(jsonPath("$[0].id").value(ITEM_ID))
-                    .andExpect(jsonPath("$[0].name").value("Black jacket"));
+                    .andExpect(jsonPath("$.content.length()").value(1))
+                    .andExpect(jsonPath("$.content[0].id").value(ITEM_ID))
+                    .andExpect(jsonPath("$.content[0].name").value("Black jacket"));
+        }
+
+        @Test
+        void shouldReturn200FilteredByCategoryQueryParam() throws Exception {
+            List<String> expectedCategories = List.of("Office");
+            when(collectionService.getAllClothingItemsInCollection(eq(USER_ID), eq(COLLECTION_ID), any(Pageable.class), eq(expectedCategories)))
+                    .thenReturn(mockPage);
+
+            mockMvc.perform(get(BASE_URL + "/{collectionId}/clothes", USER_ID, COLLECTION_ID)
+                            .param("categories", "Office"))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.content.length()").value(1))
+                    .andExpect(jsonPath("$.content[0].name").value("Black jacket"));
         }
 
         @Test
         void shouldReturn404WhenCollectionNotFound() throws Exception {
-            when(collectionService.getAllClothingItemsInCollection(USER_ID, COLLECTION_ID))
+            when(collectionService.getAllClothingItemsInCollection(eq(USER_ID), eq(COLLECTION_ID), any(Pageable.class), any()))
                     .thenThrow(collectionNotFound());
 
             mockMvc.perform(get(BASE_URL + "/{collectionId}/clothes", USER_ID, COLLECTION_ID))

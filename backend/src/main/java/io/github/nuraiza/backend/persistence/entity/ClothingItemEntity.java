@@ -33,6 +33,14 @@ public class ClothingItemEntity {
     @ManyToMany(mappedBy = "clothes")
     private Set<CollectionEntity> collections = new HashSet<>();
 
+    @ManyToMany
+    @JoinTable(
+            name = "clothing_item_categories",
+            joinColumns = @JoinColumn(name = "clothing_item_id"),
+            inverseJoinColumns = @JoinColumn(name = "category_id")
+    )
+    private Set<CategoryEntity> categories = new HashSet<>();
+
     public ClothingItemEntity(String name, String description, UserEntity user) {
         this.name = name;
         this.description = description;

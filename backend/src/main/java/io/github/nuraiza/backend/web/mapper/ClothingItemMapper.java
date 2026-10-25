@@ -2,12 +2,14 @@ package io.github.nuraiza.backend.web.mapper;
 
 import io.github.nuraiza.backend.persistence.entity.ClothingItemEntity;
 import io.github.nuraiza.backend.web.dto.ClothingItemDtos;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
-import java.util.List;
-
 @Component
+@RequiredArgsConstructor
 public class ClothingItemMapper {
+
+    private final CategoryMapper categoryMapper;
 
     public ClothingItemDtos.Response toResponse(ClothingItemEntity clothingItemEntity){
         if (clothingItemEntity == null) return null;
@@ -15,13 +17,8 @@ public class ClothingItemMapper {
                 clothingItemEntity.getId(),
                 clothingItemEntity.getName(),
                 clothingItemEntity.getDescription(),
-                clothingItemEntity.getUser().getId()
+                clothingItemEntity.getUser().getId(),
+                clothingItemEntity.getCategories().stream().map(categoryMapper::toResponse).toList()
         );
-    }
-
-    public List<ClothingItemDtos.Response> toResponse(List<ClothingItemEntity> clothingItemEntities){
-        return clothingItemEntities.stream()
-                .map(this::toResponse)
-                .toList();
     }
 }
